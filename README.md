@@ -22,7 +22,7 @@ if test -d ../PrestaShop; then
 else
   git clone https://github.com/PrestaShop/PrestaShop.git
 fi
-( cd PrestaShop; git clean -xfd; git checkout 9.0.0-beta.1 )
+( cd PrestaShop; git clean -xfd; git checkout c2059fdd9c436c2ecbd7cd97418c13cfbb99562d )
 ````
 
 Start PS with:
@@ -89,10 +89,10 @@ PrestaShop.
 This sequence only removes the database volume and keeps the other volumes
 which are actiing as cache for the npm and composer artifact downloads.
 
-```
+````
 docker compose down
 docker volume rm $(basename $PWD | tr '[:upper:]' '[:lower:]')_db-data
 ( cd PrestaShop; git clean -xfd )
 docker compose up -d
 docker compose logs -f
-```
+````
