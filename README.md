@@ -90,7 +90,7 @@ This sequence only removes the database volume and keeps the other volumes
 which are actiing as cache for the npm and composer artifact downloads.
 
 ```
-docker composer down
+docker compose down
 docker volume rm $(basename $PWD | tr '[:upper:]' '[:lower:]')_db-data
 ( cd PrestaShop; git clean -xfd )
 docker compose up -d
