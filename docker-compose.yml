@@ -1,13 +1,19 @@
-version: '2.1'
+
+networks:
+  prestashop-network:
+    ipam:
+      config:
+        - subnet: ${PS_NETWORK:-10.76.90.0/24}
 
 volumes:
   db-data:
+  shop-composer-dir-cache:
+  shop-composer-root-dir-cache:
+  shop-npm-dir-cache:
 
 services:
   mariadb:
     image: mariadb:11.4
-    ports:
-      - "3306:3306"
     volumes:
       - db-data:/var/lib/mysql
     environment:
@@ -19,15 +25,14 @@ services:
       interval: 5s
       timeout: 1s
       retries: 3
-    restart: unless-stopped
     networks:
-      - prestashop-network
+      prestashop-network:
 
   prestashop-git:
     hostname: ${PS_HOSTNAME:-localhost}
     build:
       dockerfile: .docker/Dockerfile
-      context: .
+      context: ./PrestaShop
       args:
         - VERSION=${VERSION:-8.1-apache}
         - USER_ID=${USER_ID:-1000}
@@ -41,10 +46,10 @@ services:
       DB_NAME: ${DB_NAME:-prestashop}
       DB_SERVER: ${DB_SERVER:-mariadb}
       DB_PREFIX: ${DB_PREFIX:-ps_}
-      PS_DOMAIN: ${PS_DOMAIN:-localhost:8001}
+      PS_DOMAIN: ${PS_DOMAIN:-ps90.packingpanic.com}
       PS_FOLDER_INSTALL: ${PS_FOLDER_INSTALL:-install-dev}
       PS_FOLDER_ADMIN: ${PS_FOLDER_ADMIN:-admin-dev}
-      PS_COUNTRY: ${PS_COUNTRY:-fr}
+      PS_COUNTRY: ${PS_COUNTRY:-de}
       PS_LANGUAGE: ${PS_LANGUAGE:-en}
       PS_DEV_MODE: ${PS_DEV_MODE:-1}
       PS_ENABLE_SSL: ${PS_ENABLE_SSL:-0}
@@ -56,24 +61,25 @@ services:
       BLACKFIRE_SERVER_ID: ${BLACKFIRE_SERVER_ID:-0}
       BLACKFIRE_SERVER_TOKEN: ${BLACKFIRE_SERVER_TOKEN:-0}
     command: /tmp/docker_run_git.sh
-    ports:
-      - "8001:80"
-      - "8002:443"
     depends_on:
       mariadb:
         condition: service_healthy
     volumes:
-      - ./:/var/www/html:delegated
+      - ./PrestaShop:/var/www/html
+      # make npm and composer directories persistent, so we don't download packages
+      # again if we do a reinstall. For some reason the startup script runs composer install as
+      # root, so we need to keep /root/.composer as well ;jw
+      - shop-composer-root-dir-cache:/root/.composer
+      - shop-composer-dir-cache:/var/www/.composer
+      - shop-npm-dir-cache:/var/www/.npm
     networks:
-      - prestashop-network
+      prestashop-network:
+        ipv4_address: ${PS_IP:-10.76.90.254}
 
   maildev:
     image: 'maildev/maildev'
-    ports:
-      - "1080:1080"
+# don't expose ports, we can access it here: http://10.76.90.2:1080    
+#    ports:
+#      - "1080:1080"
     networks:
       - prestashop-network
-
-networks:
-  prestashop-network:
-    name: prestashop-network
